@@ -1,0 +1,488 @@
+{
+  "name": "Many 2 Email Solution",
+  "nodes": [
+    {
+      "parameters": {
+        "batchSize": 5,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -2848,
+        -176
+      ],
+      "id": "736b0a21-d508-4bcb-9990-1bb2a0adb9c4",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "messageId": "={{ $json.id }}",
+        "simple": false,
+        "options": {
+          "dataPropertyAttachmentsPrefixName": "attachment_",
+          "downloadAttachments": true
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        -2560,
+        -96
+      ],
+      "id": "f95fdb50-cc31-4c7b-a71f-37b53c4d5a5a",
+      "name": "Get a message",
+      "webhookId": "4a17dc5a-7c6a-4f9a-a486-f2daff5e7a81"
+    },
+    {
+      "parameters": {
+        "inputText": "=Subject:{{ $json.subject }}\nEmail Body: {{ $json.text }}",
+        "categories": {
+          "categories": [
+            {
+              "category": "Primary ",
+              "description": "Anything that is a personal message such as a friend, family member or a business related message"
+            },
+            {
+              "category": "Social",
+              "description": "Anything that is a social media related message"
+            },
+            {
+              "category": "Promotional",
+              "description": "Anything that is a promotional message, from products, eccomerce brands etc"
+            },
+            {
+              "category": "Others",
+              "description": "Anything that doesn't belong to the other groups"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.textClassifier",
+      "typeVersion": 1.1,
+      "position": [
+        -2224,
+        -144
+      ],
+      "id": "157b64ea-0cfe-4f5d-929a-05ee68cd2516",
+      "name": "Text Classifier"
+    },
+    {
+      "parameters": {
+        "operation": "addLabels",
+        "messageId": "={{ $json.id }}",
+        "labelIds": [
+          "CATEGORY_PROMOTIONS"
+        ]
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        -1776,
+        -16
+      ],
+      "id": "16b854e3-038c-4144-a7cd-6e4d21da697a",
+      "name": "PROMOTIONS",
+      "webhookId": "752c6cf2-de63-4591-bd69-052a3c24bf9b"
+    },
+    {
+      "parameters": {
+        "operation": "addLabels",
+        "messageId": "={{ $json.id }}",
+        "labelIds": [
+          "CATEGORY_UPDATES"
+        ]
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        -1776,
+        144
+      ],
+      "id": "279be412-c89c-4193-86b0-7b0e7041fa73",
+      "name": "OTHERS",
+      "webhookId": "752c6cf2-de63-4591-bd69-052a3c24bf9b"
+    },
+    {
+      "parameters": {
+        "operation": "addLabels",
+        "messageId": "={{ $json.id }}",
+        "labelIds": [
+          "CATEGORY_SOCIAL"
+        ]
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        -1776,
+        -160
+      ],
+      "id": "0c81a012-5f2b-44f4-99a9-c784b5f75e63",
+      "name": "SOCIALS",
+      "webhookId": "752c6cf2-de63-4591-bd69-052a3c24bf9b"
+    },
+    {
+      "parameters": {
+        "operation": "addLabels",
+        "messageId": "={{ $json.id }}",
+        "labelIds": [
+          "IMPORTANT"
+        ]
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        -1776,
+        -320
+      ],
+      "id": "1e8a2479-e7a8-4447-951e-0b44a40514f0",
+      "name": "IMPORTANT",
+      "webhookId": "752c6cf2-de63-4591-bd69-052a3c24bf9b"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        -1408,
+        -64
+      ],
+      "id": "a676b5c7-5de6-4674-87ea-01dfc6a94851",
+      "name": "No Operation, do nothing"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -3360,
+        -208
+      ],
+      "id": "b2570757-9670-4016-9450-f967992b0162",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "limit": 5,
+        "filters": {
+          "q": "newer_than:1d"
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        -3120,
+        -208
+      ],
+      "id": "23af1586-88ac-4e53-969c-4cf254ecf124",
+      "name": "Get many messages1",
+      "webhookId": "1be47e3b-d073-4099-873e-bb445b17f20e"
+    },
+    {
+      "parameters": {
+        "sendTo": "Yungchaad@gmail.com",
+        "subject": "Email Summary",
+        "emailType": "text",
+        "message": "={{ $json.combined_email_body }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        -992,
+        -320
+      ],
+      "id": "f6a6ddd6-f88a-4658-9063-b6272adaab46",
+      "name": "Send a message1",
+      "webhookId": "98938bc6-cef9-4e95-9f4d-7b6f9c5a1a3a"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        -2224,
+        160
+      ],
+      "id": "d2291b5c-a226-4511-9352-30e5c287081b",
+      "name": "OpenAI Chat Model"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4.1-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4.1-MINI"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=Sender: {{ $('Text Classifier').item.json.headers.from }}\nTime: {{ $('Text Classifier').item.json.headers.date }}\nMessage:{{ $('Text Classifier').item.json.textAsHtml }}\nSubject: {{ $('Text Classifier').item.json.subject }}"
+            },
+            {
+              "content": "You are an email summarizer. You will receive a list of emails that were marked as \"Important\" in the last 24 hours. \nEach email includes the sender name, email address, timestamp, subject, and body text. \nYour job is to summarize these emails in a compact, human-readable format so I can quickly follow up.\n\nOutput the summary in this exact style as one JSON content i.e JSON.summary = Email:\nTime sent:\nShort summary of what they wanted or what the message was about\n\nIf the sender has multiple messages, group them under their name and email, one line per message.\n\nAt the end, add a separator line of “-----”.\n\nExample:\nEmmanuel@gmail.com\n12:30pm - waiting for xyz\n1:30pm - wanting to sell you x\n\nJosephine@gmail.com\n3:40pm - left a message\n\nKeep each summary short (max 1 line per message). Focus on the sender’s intent — what do they want me to know or do?\nDo not include greetings or signatures.\n",
+              "role": "system"
+            }
+          ]
+        },
+        "jsonOutput": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        -1568,
+        -320
+      ],
+      "id": "526b748a-4af7-4d40-b098-5f6990bdefd4",
+      "name": "Message a model1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Function node: prepend friendly header and return body for email\nfunction toStr(v){\n  if (v === undefined || v === null) return '';\n  if (typeof v === 'string') return v;\n  if (typeof v === 'number' || typeof v === 'boolean') return String(v);\n  try { return JSON.stringify(v); } catch(e) { return String(v); }\n}\n\n// extractText / getCandidateFromItem from previous robust function (keeps objects safe)\nfunction extractText(value) {\n  if (value === undefined || value === null) return '';\n  if (typeof value === 'string') return value.trim();\n  if (typeof value === 'number' || typeof value === 'boolean') return String(value);\n  if (Array.isArray(value)) {\n    const parts = value.map(v => extractText(v)).filter(Boolean);\n    return parts.join('\\n').trim();\n  }\n  if (typeof value === 'object') {\n    const keys = ['summary','text','content','output','result','body','message','parts','choices','data'];\n    for (const k of keys) {\n      if (value[k]) {\n        if (Array.isArray(value[k])) return extractText(value[k]);\n        const t = extractText(value[k]);\n        if (t) return t;\n      }\n    }\n    for (const k of Object.keys(value)) {\n      const t = extractText(value[k]);\n      if (t && t.length > 10) return t;\n    }\n    return toStr(value).replace(/^[\\{\\[]|[\\}\\]]$/g,'').trim();\n  }\n  return '';\n}\n\nfunction getCandidateFromItem(j) {\n  const tryKeys = ['summary','combined','combined_summary','final','line','ai_output','text','body','message','result'];\n  for (const k of tryKeys) {\n    if (j.hasOwnProperty(k) && j[k]) {\n      const t = extractText(j[k]);\n      if (t) return t;\n    }\n  }\n  if (j.parts && Array.isArray(j.parts)) {\n    const p = extractText(j.parts);\n    if (p) return p;\n  }\n  if (j.choices && Array.isArray(j.choices)) {\n    const p = extractText(j.choices);\n    if (p) return p;\n  }\n  for (const key of Object.keys(j)) {\n    const v = j[key];\n    if (typeof v === 'string' && /\\d{1,2}:\\d{2}\\s*-\\s/.test(v)) return v.trim();\n  }\n  let best = '';\n  for (const key of Object.keys(j)) {\n    const t = extractText(j[key]);\n    if (t.length > best.length) best = t;\n  }\n  return best.trim();\n}\n\n// Build groups by sender\nconst groups = {}; // email => { name, entries: [] }\n\nfor (const it of items) {\n  const j = it.json || {};\n  const email = (j.from_email || j.email || j.sender || 'unknown@example.com').toString().trim();\n  const name  = (j.from_name || j.name || '').toString().trim();\n  const time  = (j.time_local || j.time || j.date || '').toString().trim();\n  const candidate = getCandidateFromItem(j);\n  if (!candidate) continue;\n  const candidateLines = candidate.split(/\\r?\\n/).map(s=>s.trim()).filter(Boolean);\n  const linesToAdd = candidateLines.length === 1 ? [candidateLines[0]] : candidateLines;\n  if (!groups[email]) groups[email] = { name, entries: [] };\n  for (const l of linesToAdd) {\n    const hasTime = /\\d{1,2}:\\d{2}\\s*(am|pm)?\\s*-/i.test(l);\n    const entryLine = hasTime ? l : (time ? `${time} - ${l}` : l);\n    groups[email].entries.push(entryLine);\n  }\n}\n\n// Compose summaries block\nlet summariesText = '';\nconst emails = Object.keys(groups);\nfor (const email of emails) {\n  summariesText += `${email}\\n`;\n  const entries = groups[email].entries || [];\n  for (const e of entries) summariesText += `${e}\\n`;\n  summariesText += `\\n`;\n}\nif (!summariesText) summariesText = '[no summaries found]';\nsummariesText = summariesText.trim() + `\\n\\n-----`;\n\n// Determine recipient name heuristically (from first item or fallback)\nlet recipientName = 'Chris';\nif (items[0] && items[0].json) {\n  const j0 = items[0].json;\n  const maybe = j0.recipientName || j0.to_name || j0.toName || j0.to || j0.user || j0.owner;\n  if (maybe) {\n    // extract human name part if it's an email or has angle brackets\n    const cleaned = String(maybe).replace(/<.*?>/g,'').replace(/[\"']/g,'').trim();\n    if (cleaned) recipientName = cleaned.split(/[<@]/)[0].trim();\n  }\n}\n\n// Build friendly header\nconst header = `Hey ${recipientName},\\n\\nThis is your summary from the last 24 hours. Have a great day!\\n\\n`;\n\n// Final email body\nconst combinedEmailBody = header + summariesText;\n\n// Return both (for debug and flexibility)\nreturn [{ json: { combined_summary: summariesText, combined_email_body: combinedEmailBody, itemCount: items.length } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1232,
+        -320
+      ],
+      "id": "d3e68b73-4ff0-4cd4-8e37-4d98ceb4103e",
+      "name": "Code in JavaScript"
+    }
+  ],
+  "pinData": {
+    "Message a model1": [
+      {
+        "json": {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": {
+              "summary": "Google <no-reply@accounts.google.com>\n20:45 - Alert that n8n.cloud was given access to your Google Account data; prompts to review account activity and secure account if unauthorized\n-----"
+            },
+            "refusal": null,
+            "annotations": []
+          },
+          "logprobs": null,
+          "finish_reason": "stop"
+        }
+      },
+      {
+        "json": {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": {
+              "summary": "oloyeomeiza@gmail.com\n16:09 - Invitation to Outpouring, requesting confirmation and a few days notice for logistics preparation\n-----"
+            },
+            "refusal": null,
+            "annotations": []
+          },
+          "logprobs": null,
+          "finish_reason": "stop"
+        }
+      },
+      {
+        "json": {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": {
+              "summary": "Emmanuel Faboro <olatunjifaboro99@gmail.com>\n21:00 - Encouraging message about positive changes coming soon.\n-----"
+            },
+            "refusal": null,
+            "annotations": []
+          },
+          "logprobs": null,
+          "finish_reason": "stop"
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Loop Over Items": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Get a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get a message": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Text Classifier",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Text Classifier": {
+      "main": [
+        [
+          {
+            "node": "IMPORTANT",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "SOCIALS",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "PROMOTIONS",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "OTHERS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PROMOTIONS": {
+      "main": [
+        [
+          {
+            "node": "No Operation, do nothing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OTHERS": {
+      "main": [
+        [
+          {
+            "node": "No Operation, do nothing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SOCIALS": {
+      "main": [
+        [
+          {
+            "node": "No Operation, do nothing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IMPORTANT": {
+      "main": [
+        [
+          {
+            "node": "Message a model1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Get many messages1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many messages1": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Text Classifier",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model1": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Send a message1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "f89c9cac-3736-422e-b1cb-34fdfb57420b",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "4fc582d90d92c50feddb8c114fb53d2aa450d810b1bc7a485479fb6beedb8be1"
+  },
+  "id": "L42XAnCPkvVFLUYo",
+  "tags": []
+}

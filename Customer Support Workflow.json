@@ -1,0 +1,403 @@
+{
+  "name": "Customer Support Workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "simple": false,
+        "filters": {},
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        0
+      ],
+      "id": "10856f17-449e-4d78-8178-1163682f8f66",
+      "name": "Gmail Trigger",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "YVoGNgIv3X9HTTPy",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "inputText": "={{ $json.text }}",
+        "categories": {
+          "categories": [
+            {
+              "category": "SUI Message",
+              "description": "An Email that is related to SUI ecosystem. E.G \" I will like to ask about SUI\""
+            },
+            {
+              "category": "Other",
+              "description": "Any email that is not SUI related"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.textClassifier",
+      "typeVersion": 1.1,
+      "position": [
+        208,
+        0
+      ],
+      "id": "378b0ae6-dff7-44d0-b973-8279a9c10fad",
+      "name": "Text Classifier"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        144,
+        208
+      ],
+      "id": "d162cd04-0fb9-488e-b4ce-49edc6bcf4ed",
+      "name": "OpenRouter Chat Model",
+      "credentials": {
+        "openRouterApi": {
+          "id": "f8I3xm13lpcbCq8K",
+          "name": "OpenRouter account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        480,
+        144
+      ],
+      "id": "84ec99cd-5c16-464c-bbdd-bee8732b0f09",
+      "name": "No Operation, do nothing"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.text }}",
+        "options": {
+          "systemMessage": "=You are a helpful assistant\n\nI need you to go through my mail for questions or comments relating to SUI"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        560,
+        -32
+      ],
+      "id": "d21b4b11-c682-4f68-bdfb-cef2056a9306",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": "anthropic/claude-3.5-sonnet",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        640,
+        240
+      ],
+      "id": "5c8dc94f-a548-4143-b1f4-92dc9479ba35",
+      "name": "OpenRouter Chat Model1",
+      "credentials": {
+        "openRouterApi": {
+          "id": "f8I3xm13lpcbCq8K",
+          "name": "OpenRouter account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolDescription": "Call this tool to access anything SUI related.",
+        "pineconeIndex": {
+          "__rl": true,
+          "value": "pinecone",
+          "mode": "list",
+          "cachedResultName": "pinecone"
+        },
+        "options": {
+          "pineconeNamespace": "SUI"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStorePinecone",
+      "typeVersion": 1.3,
+      "position": [
+        784,
+        224
+      ],
+      "id": "55d3c4b2-11ee-494d-b4c7-59d51e755994",
+      "name": "Pinecone Vector Store",
+      "credentials": {
+        "pineconeApi": {
+          "id": "pYV8YPVJuyWwtKfq",
+          "name": "PineconeApi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "reply",
+        "messageId": "={{ $('Gmail Trigger').item.json.id }}",
+        "emailType": "text",
+        "message": "={{ $json.output }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1216,
+        -32
+      ],
+      "id": "bd8ca052-0212-4a3d-959d-e8d55b9b7b34",
+      "name": "Reply to a message",
+      "webhookId": "b8842803-5fb3-4f58-bb71-6d629f07a895",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "YVoGNgIv3X9HTTPy",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "addLabels",
+        "messageId": "={{ $('Gmail Trigger').item.json.id }}",
+        "labelIds": [
+          "IMPORTANT"
+        ]
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        928,
+        -32
+      ],
+      "id": "fdd3e1cf-86cc-4359-bb8e-79f6fa89b43e",
+      "name": "Add label to message",
+      "webhookId": "dd12f11d-296f-411e-8bf4-87380cc14792",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "YVoGNgIv3X9HTTPy",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.embeddingsGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        784,
+        384
+      ],
+      "id": "3402229e-2416-4b7b-a5fd-6756c563fe6e",
+      "name": "Embeddings Google Gemini",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "kl97WeNBuFaAPnZI",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    }
+  ],
+  "pinData": {
+    "Gmail Trigger": [
+      {
+        "json": {
+          "id": "199cd8d6d2828e1c",
+          "threadId": "199cd8d6d2828e1c",
+          "labelIds": [
+            "UNREAD",
+            "IMPORTANT",
+            "CATEGORY_PERSONAL",
+            "INBOX"
+          ],
+          "sizeEstimate": 6210,
+          "headers": {
+            "delivered-to": "Delivered-To: oloyeomeiza@gmail.com",
+            "received": "Received: from mail-sor-f41.google.com (mail-sor-f41.google.com. [209.85.220.41])\r\n        by mx.google.com with SMTPS id a640c23a62f3a-b55ef77cb4dsor92655466b.11.2025.10.10.02.57.01\r\n        for <oloyeomeiza@gmail.com>\r\n        (Google Transport Security);\r\n        Fri, 10 Oct 2025 02:57:01 -0700 (PDT)",
+            "x-received": "X-Received: by 2002:a17:907:2d24:b0:b04:32ff:5d3a with SMTP id\r\n a640c23a62f3a-b50a6ca46e1mr1209596066b.0.1760090220618; Fri, 10 Oct 2025\r\n 02:57:00 -0700 (PDT)",
+            "arc-seal": "ARC-Seal: i=1; a=rsa-sha256; t=1760090221; cv=none;\r\n        d=google.com; s=arc-20240605;\r\n        b=ksbPECsIETzfC+e7MjE0F1PLDy140b35PxWgsr9fq/3QMZAX2hMJ6pebML2OLRv4Ox\r\n         T8XGMBsIFuKUBDpOiN6BxFlIOYeW0/MkkZd9Gk1LtEEfeYV2VDBh7y7/YJMSRXHbgxmX\r\n         War6z0mNpwqnWy5tp8A/LdA6H+bonokibVUJwC+6XSoTHV9D8q2TWSZ+fxqKKodF/biT\r\n         8RRjs2X1/2sUG2v5HV1WLhaj52dhO7SxBEBHqU+gTC+o6EG/n93T+Z5475I/gxdFjK57\r\n         i33N3Th3ecTWSLnpOMCyKLQ56qmQIastCPOwdEWyELXLHw6GR5vN9bCwEzQt7giLcBcO\r\n         csOA==",
+            "arc-message-signature": "ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20240605;\r\n        h=to:subject:message-id:date:from:mime-version:dkim-signature;\r\n        bh=JMBHwX01NRnHlh+eskkvxW3M2Gxd/sDZbZHSqaUuWJE=;\r\n        fh=T5dWmC+9AkipNaeWpVhHCUb6lBbDnqIu7N+/ZBJyBq4=;\r\n        b=FCCprvL4DbHiEMhNa/CJ5mbXt7BGrVjZK5Wm1XLii8iZ6hStuj+iV0kvuG7SfmKx0p\r\n         Wxi4iBEfwtGvBqj6a5NV6eEP5zMUOVzs7cEs66AINcSdiVWTEtTB3v8UoRBVycnlEaWu\r\n         sJ+JBN4PgB+ZOwC6J9T3oKVlwb5zMUd6LS+7TOajtTe5HowOI8Rly9OtcHAJ2Zi6T9mJ\r\n         nULwkbAT5/2NEKyWPwBQyncbFBrzle+6wBRPasVcsE7opQP5ImdbAzYeEHXJ18O8PO4K\r\n         yoESms7P0/KoH55T3IpLwfB7GVJiQVe5hi/aM28ib1a3pTC5PNSbayQTkBpdPbbRwuhO\r\n         FnRQ==;\r\n        dara=google.com",
+            "arc-authentication-results": "ARC-Authentication-Results: i=1; mx.google.com;\r\n       dkim=pass header.i=@gmail.com header.s=20230601 header.b=lr2KHm7O;\r\n       spf=pass (google.com: domain of tunjifaboro11@gmail.com designates 209.85.220.41 as permitted sender) smtp.mailfrom=tunjifaboro11@gmail.com;\r\n       dmarc=pass (p=NONE sp=QUARANTINE dis=NONE) header.from=gmail.com;\r\n       dara=pass header.i=@gmail.com",
+            "return-path": "Return-Path: <tunjifaboro11@gmail.com>",
+            "received-spf": "Received-SPF: pass (google.com: domain of tunjifaboro11@gmail.com designates 209.85.220.41 as permitted sender) client-ip=209.85.220.41;",
+            "authentication-results": "Authentication-Results: mx.google.com;\r\n       dkim=pass header.i=@gmail.com header.s=20230601 header.b=lr2KHm7O;\r\n       spf=pass (google.com: domain of tunjifaboro11@gmail.com designates 209.85.220.41 as permitted sender) smtp.mailfrom=tunjifaboro11@gmail.com;\r\n       dmarc=pass (p=NONE sp=QUARANTINE dis=NONE) header.from=gmail.com;\r\n       dara=pass header.i=@gmail.com",
+            "dkim-signature": "DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;\r\n        d=gmail.com; s=20230601; t=1760090221; x=1760695021; dara=google.com;\r\n        h=to:subject:message-id:date:from:mime-version:from:to:cc:subject\r\n         :date:message-id:reply-to;\r\n        bh=JMBHwX01NRnHlh+eskkvxW3M2Gxd/sDZbZHSqaUuWJE=;\r\n        b=lr2KHm7OvVkJAIRHkiiNarMxl7Xf0mq2VlKoffOEYl9Wo7xmD6eU8PpTINiuIORZJm\r\n         zYk3G5Hb0/o+J/oVtzgPvPSG9Hz3TDCP70uQjABHAOTNO2mtm85ZO9SrXGKMWviHkKo4\r\n         RJJvFBkLrbfaXWonIpGGUtTaAOU6RElkKcv2mnEgANFe3mfRf+i7cBvJUx84XmfUoGlV\r\n         b+gx0lBWTDYm0hIdr3A4vR0hFPUxq6Ui7EmZiImHCvpdgppZtJl1vsa0aOihzP5Ww0UY\r\n         Up09lk/s47gyvpijkFom0YfK+YD/SmdEkX3tyUOogAstrbvSLigZcoAUbq5lyhHNDXPD\r\n         XwXg==",
+            "x-google-dkim-signature": "X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;\r\n        d=1e100.net; s=20230601; t=1760090221; x=1760695021;\r\n        h=to:subject:message-id:date:from:mime-version:x-gm-message-state\r\n         :from:to:cc:subject:date:message-id:reply-to;\r\n        bh=JMBHwX01NRnHlh+eskkvxW3M2Gxd/sDZbZHSqaUuWJE=;\r\n        b=vNMOwW6RNrTFICz890doxLK1/zL8O5s/Q5lJNbgazjdVGQKKS5wSkGYL4kWpI6rC4Y\r\n         2zEojLchcheoVTRnvv0i3MZUuxORBQjTxco1DOToeuY8Q8FDFdUctpUnDvHkY+4qsQUh\r\n         MZZRBkmrXV84CLokNRvf3joPkoFxJDKNSas2739PLghxAJ8TuOg7BfS3GdulPlyO/9hZ\r\n         sh8gbutSlqGiMb7bUkcwjFPgXWUji6/tMjsI7YzTrjANNjJEuRLd2+UIplglxEUH+WNo\r\n         aXsYiw64GJ7gLWULcVL8O7Q9aupYPph0VyEhL8AilAcXrcKhpFUADx5qytxPg2CmBbTK\r\n         iGrw==",
+            "x-gm-message-state": "X-Gm-Message-State: AOJu0Yxkjoteu79RCa8UmvMh7MWLiglcj9X2K4+A6RymGMhtHT72UFxq\r\n\tetXWmgbJxxSz49ZmZR/U+ryX9+BeXNDBBYR4PUhh/BNGK2AQE2A5wn4+vgg1NBoBYdwIOS7BiLG\r\n\tqHCVksLxQJ0wSE8fkiUoTQbXelMgLnf4bgLp2j+U=",
+            "x-gm-gg": "X-Gm-Gg: ASbGncuUFcKdTMOU6qnhMK0N9tvcDIFeOzlXDU/bfJUPJshDbh6nrd9eGpkIFYMVJnS\r\n\tUXV7NR2OHVt8QN9PLPNygIaYgYTDwlyR9NdvRx+CfJqEKtjGp+UmC8HmNDYKhgBnk2Im3G4nUQG\r\n\tsB9lHPIqAVnMGsfz1rQHIeSifzZL1owje87BgpNYQoqmrrG/1HcqDIhEvUDXGNatygWb4gbcv5u\r\n\tg32yM0tWRRXPTIyTkaHy2dmlcWaNZ33",
+            "x-google-smtp-source": "X-Google-Smtp-Source: AGHT+IEXEn/uI2ThFdGZe/ahjnf7WI/eLCgHzRlZgFM4ZvDJZA0/TwzeHgBpFuVai8U0O0cGmQ+3n88TH/VS/luM350=",
+            "mime-version": "MIME-Version: 1.0",
+            "from": "From: Tunji Faboro <tunjifaboro11@gmail.com>",
+            "date": "Date: Fri, 10 Oct 2025 10:56:49 +0100",
+            "x-gm-features": "X-Gm-Features: AS18NWAXRz7AN6S-6OpToita5rVK34-tiaYQBX9wBEfH7LegBnN-MSbvLWVq1ak",
+            "message-id": "Message-ID: <CACbSGYTfg8v7+UeF7c0yuUAGR+Wq-euPvnF0hGxZJF-J4SEEsQ@mail.gmail.com>",
+            "subject": "Subject: ",
+            "to": "To: oloyeomeiza@gmail.com",
+            "content-type": "Content-Type: multipart/alternative; boundary=\"0000000000005f6cf20640caf050\""
+          },
+          "html": "<div dir=\"auto\"><span style=\"font-size:16px;font-style:normal;font-weight:400;letter-spacing:normal;text-indent:0px;text-transform:none;white-space:normal;word-spacing:1px;text-decoration:none;float:none;display:inline!important;background-color:rgba(0,0,0,0);border-color:rgb(49,49,49);color:rgb(49,49,49)\">Hello there I would like to know which programming language SUI runs on and if SUI suffers downtime like other protocols e.g Solana</span></div>\n",
+          "text": "Hello there I would like to know which programming language SUI runs on and\nif SUI suffers downtime like other protocols e.g Solana\n",
+          "textAsHtml": "<p>Hello there I would like to know which programming language SUI runs on and<br/>if SUI suffers downtime like other protocols e.g Solana</p>",
+          "date": "2025-10-10T09:56:49.000Z",
+          "to": {
+            "value": [
+              {
+                "address": "oloyeomeiza@gmail.com",
+                "name": ""
+              }
+            ],
+            "html": "<span class=\"mp_address_group\"><a href=\"mailto:oloyeomeiza@gmail.com\" class=\"mp_address_email\">oloyeomeiza@gmail.com</a></span>",
+            "text": "oloyeomeiza@gmail.com"
+          },
+          "from": {
+            "value": [
+              {
+                "address": "tunjifaboro11@gmail.com",
+                "name": "Tunji Faboro"
+              }
+            ],
+            "html": "<span class=\"mp_address_group\"><span class=\"mp_address_name\">Tunji Faboro</span> &lt;<a href=\"mailto:tunjifaboro11@gmail.com\" class=\"mp_address_email\">tunjifaboro11@gmail.com</a>&gt;</span>",
+            "text": "\"Tunji Faboro\" <tunjifaboro11@gmail.com>"
+          },
+          "messageId": "<CACbSGYTfg8v7+UeF7c0yuUAGR+Wq-euPvnF0hGxZJF-J4SEEsQ@mail.gmail.com>"
+        }
+      }
+    ],
+    "AI Agent": [
+      {
+        "json": {
+          "output": "Based on the information retrieved, I can provide you with answers to both of your questions:\n\n1. Programming Language:\nSUI is built using the Move programming language. The team behind SUI includes former Meta executives who were actually involved in creating the Move programming language, bringing their expertise to the project.\n\n2. Network Downtime and Stability:\nSUI has been specifically designed to address the limitations and issues that plague other Layer 1 blockchains. It was built with two main objectives:\n- To achieve low latency\n- To have more scalability than any existing L1 blockchain\n\nThe platform uses a proof-of-stake consensus mechanism and has been architected with a focus on:\n- Speed and scalability\n- High transaction throughput\n- Network stability\n\nWhile the available information doesn't explicitly compare SUI's downtime to Solana's, SUI has been specifically designed to deliver \"unique functionality and scalability for a vast user base without the limitations of existing Layer 1 blockchains.\" Its architecture prioritizes network stability and aims to overcome the common issues faced by other blockchain networks.\n\nThe focus on low latency and superior scalability suggests that SUI is built to be more resilient against the kind of network congestion and downtime issues that have affected other protocols like Solana."
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "Text Classifier",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Text Classifier",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Text Classifier": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Operation, do nothing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pinecone Vector Store": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Add label to message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add label to message": {
+      "main": [
+        [
+          {
+            "node": "Reply to a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings Google Gemini": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Pinecone Vector Store",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "6623c8c3-969b-4b1d-b8b6-559d444659fe",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "4fc582d90d92c50feddb8c114fb53d2aa450d810b1bc7a485479fb6beedb8be1"
+  },
+  "id": "45wytWSJOxVjFyd7",
+  "tags": []
+}

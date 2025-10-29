@@ -1,0 +1,683 @@
+{
+  "name": "X Listener",
+  "nodes": [
+    {
+      "parameters": {
+        "operation": "search",
+        "searchText": "Binance",
+        "limit": 10,
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.twitter",
+      "typeVersion": 2,
+      "position": [
+        -704,
+        304
+      ],
+      "id": "e6e593f0-2254-4afe-b123-156253362b57",
+      "name": "Search Tweets"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -496,
+        304
+      ],
+      "id": "cf0ae1b3-ba68-4ddd-bde5-25a61b81e223",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 15
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -912,
+        400
+      ],
+      "id": "f3a006e8-c6db-4bb9-aa1a-b5faf050660f",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -912,
+        240
+      ],
+      "id": "9629d7ed-23c8-46da-9b8f-2aefa8f2837c",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a sentiment analysis expert. \nAnalyze the sentiment of social media posts and classify them as \"Positive\", \"Negative\", or \"Neutral\". \nRespond ONLY in valid JSON format, structured exactly like this: {\"sentiment\": \"Positive\"}\nDo not include explanations, text, or anything else.\n\nAnalyze the sentiment of this tweet: {{ $json.text }}\n\n",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        -288,
+        368
+      ],
+      "id": "f8bc108d-23f2-4f02-88ff-e6c7f29bd827",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": "openai/gpt-4o-mini",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        -288,
+        576
+      ],
+      "id": "2ca4aabc-5599-44a3-b7e0-9db97ff7d123",
+      "name": "OpenRouter Chat Model"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Function node set to: Run Once for Each Item\nconst item = $input.item;\n\nconst rawOutput = item.json.output || item.json.response || item.json.text || JSON.stringify(item.json || {});\nconst aiText = typeof rawOutput === 'string' ? rawOutput : JSON.stringify(rawOutput);\n\nfunction validSentiment(s) {\n  return typeof s === 'string' && [\"Positive\",\"Negative\",\"Neutral\"].includes(s.trim());\n}\n\nlet sentiment = null;\n\n// Try parse JSON inside aiText\ntry {\n  const jsonMatch = aiText.match(/\\{[\\s\\S]*\\}/);\n  if (jsonMatch) {\n    const parsed = JSON.parse(jsonMatch[0]);\n    sentiment = parsed?.message?.content?.sentiment || parsed?.sentiment || null;\n    if (validSentiment(sentiment)) sentiment = sentiment.trim();\n    else sentiment = null;\n  }\n} catch (e) { /* ignore */ }\n\n// Try to find the word directly\nif (!sentiment) {\n  const r = aiText.match(/\\b(Positive|Negative|Neutral)\\b/i);\n  if (r) sentiment = r[0].charAt(0).toUpperCase() + r[0].slice(1).toLowerCase();\n}\n\n// Final fallback heuristic\nif (!sentiment) {\n  const post = item.json.text || \"\";\n  const neg = /\\b(hate|terrible|worst|awful|angry|disappointed|sucks|scam|stupid|broke)\\b/i;\n  const pos = /\\b(love|great|amazing|awesome|happy|excellent|nice|enjoyed|fantastic|best)\\b/i;\n  if (neg.test(post) && !pos.test(post)) sentiment = \"Negative\";\n  else if (pos.test(post) && !neg.test(post)) sentiment = \"Positive\";\n  else sentiment = \"Neutral\";\n}\n\n// Return single normalized item for this tweet\nreturn {\n  json: {\n    ...item.json,\n    message: { content: { sentiment } }\n  }\n};\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        48,
+        336
+      ],
+      "id": "a0ebd2fa-e9ec-4749-a088-3b0360632232",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.message.content.sentiment }}",
+                    "rightValue": "Positive",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "96a818b4-02e7-488c-b538-4737027b41be"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "cf020558-c528-4366-a2c5-88e3ec1b29ec",
+                    "leftValue": "={{ $json.message.content.sentiment }}",
+                    "rightValue": "Negative",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "af19bd68-1b0c-4a5b-9d5a-683505ec1028",
+                    "leftValue": "={{ $json.message.content.sentiment }}",
+                    "rightValue": "Neutral",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.3,
+      "position": [
+        304,
+        320
+      ],
+      "id": "2849c3cb-1de4-4b4b-b65c-ec7fc8c77787",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1wSFvWhoKMh3UlXiNmjUWhBazUmtJfZ-U4d_1Ya3tN50",
+          "mode": "list",
+          "cachedResultName": "X listener",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1wSFvWhoKMh3UlXiNmjUWhBazUmtJfZ-U4d_1Ya3tN50/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1wSFvWhoKMh3UlXiNmjUWhBazUmtJfZ-U4d_1Ya3tN50/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Date": "={{ $now.format('yyyy-mm-dd HH:mm:ss') }}",
+            "Tweet ID": "={{ $('Search Tweets').item.json.id }}",
+            "Tweet Text": "={{ $('Search Tweets').item.json.text }}",
+            "Sentiment": "={{ $json.message.content.sentiment }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Tweet ID",
+              "displayName": "Tweet ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Tweet Text",
+              "displayName": "Tweet Text",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Sentiment",
+              "displayName": "Sentiment",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        576,
+        144
+      ],
+      "id": "e4ee6c87-ca52-4196-93bf-00d2cb51063c",
+      "name": "Append row in sheet"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1wSFvWhoKMh3UlXiNmjUWhBazUmtJfZ-U4d_1Ya3tN50",
+          "mode": "list",
+          "cachedResultName": "X listener",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1wSFvWhoKMh3UlXiNmjUWhBazUmtJfZ-U4d_1Ya3tN50/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1wSFvWhoKMh3UlXiNmjUWhBazUmtJfZ-U4d_1Ya3tN50/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Date": "={{ $now.format('yyyy-mm-dd HH:mm:ss') }}",
+            "Tweet ID": "={{ $('Search Tweets').item.json.id }}",
+            "Tweet Text": "={{ $('Search Tweets').item.json.text }}",
+            "Sentiment": "={{ $json.message.content.sentiment }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Tweet ID",
+              "displayName": "Tweet ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Tweet Text",
+              "displayName": "Tweet Text",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Sentiment",
+              "displayName": "Sentiment",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        576,
+        336
+      ],
+      "id": "53c03052-3243-495e-886e-9dcc3115a704",
+      "name": "Append row in sheet1"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1wSFvWhoKMh3UlXiNmjUWhBazUmtJfZ-U4d_1Ya3tN50",
+          "mode": "list",
+          "cachedResultName": "X listener",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1wSFvWhoKMh3UlXiNmjUWhBazUmtJfZ-U4d_1Ya3tN50/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1wSFvWhoKMh3UlXiNmjUWhBazUmtJfZ-U4d_1Ya3tN50/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Date": "={{ $now.format('yyyy-mm-dd HH:mm:ss') }}",
+            "Tweet ID": "={{ $('Search Tweets').item.json.id }}",
+            "Tweet Text": "={{ $('Search Tweets').item.json.text }}",
+            "Sentiment": "={{ $json.message.content.sentiment }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Tweet ID",
+              "displayName": "Tweet ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Tweet Text",
+              "displayName": "Tweet Text",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Sentiment",
+              "displayName": "Sentiment",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        592,
+        528
+      ],
+      "id": "2405d15c-9c3c-4f4c-a991-32dd4deb046e",
+      "name": "Append row in sheet2"
+    },
+    {
+      "parameters": {
+        "chatId": "869033673",
+        "text": "=**Negative Mention Alert!!!**\n\nTWEET: {{ $json['Tweet Text'] }}\nLink: https://twitter.com/i/web/status/{{ $json['Tweet ID'] }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        784,
+        336
+      ],
+      "id": "fc1e80bf-ffb3-4a6b-95ff-1e9981e37f01",
+      "name": "Send a text message",
+      "webhookId": "f6f3b33e-c3ea-42ed-8431-8f992f26a19a"
+    }
+  ],
+  "pinData": {
+    "Search Tweets": [
+      {
+        "json": {
+          "id": "1978608783350722908",
+          "text": "@itsmeMKaur Thank you \n\nYou are absolutely right. Anyone might die anytime. \n\nSo liked that famous Nike Ad - Just do it😎",
+          "edit_history_tweet_ids": [
+            "1978608783350722908"
+          ]
+        }
+      },
+      {
+        "json": {
+          "id": "1978608779848810673",
+          "text": "RT @fullress: 【2025年 11/15 発売予定】\nNIKE AIR JORDAN 1 RETRO LOW OG “Chicago/Black/Muslin/Varsity Red” (ナイキ エア ジョーダン 1 レトロ ロー “シカゴ/ブラック/ムスリン/バー…",
+          "edit_history_tweet_ids": [
+            "1978608779848810673"
+          ]
+        }
+      },
+      {
+        "json": {
+          "id": "1978608776010977751",
+          "text": "RT @EldenMonitors: AD: Last Sizes on the Nike Los Angeles Lakers Kobe Bryant Icon Edition Jersey Yellow\n\nhttps://t.co/vfHxnHURnP https://t.…",
+          "edit_history_tweet_ids": [
+            "1978608776010977751"
+          ]
+        }
+      },
+      {
+        "json": {
+          "id": "1978608765067804706",
+          "text": "RT @EldenMonitors: Sizes Added: \"Cool Blue\" Men's Nike Air Trainer Huarache #ad \n\n=&gt; https://t.co/tPcOsQD4rv\n\nUnder retail with status! htt…",
+          "edit_history_tweet_ids": [
+            "1978608765067804706"
+          ]
+        }
+      },
+      {
+        "json": {
+          "id": "1978608692980576571",
+          "text": "@EmilyLazar_SM @adidasrunning @BurningPounds @NBRunning @PUMARunning @Nike @NikeLA @nikestore Amazing workout! 🏋️",
+          "edit_history_tweet_ids": [
+            "1978608692980576571"
+          ]
+        }
+      },
+      {
+        "json": {
+          "id": "1978608629956612236",
+          "text": "RT @phxsunz25: dammit … *opens Nike app*",
+          "edit_history_tweet_ids": [
+            "1978608629956612236"
+          ]
+        }
+      },
+      {
+        "json": {
+          "id": "1978608628908368146",
+          "text": "RT @NickDePaula: Kevin Durant debuts the “Slim Reaper” KD 18 from Nike’s upcoming Halloween Pack: https://t.co/Xqra2nPT7x",
+          "edit_history_tweet_ids": [
+            "1978608628908368146"
+          ]
+        }
+      },
+      {
+        "json": {
+          "id": "1978608593415909567",
+          "text": "RT @GuajeSalvaje: Los Mossos se despliegan ante el McDonald's de la Estación de Sants para evitar que vagos y maleantes lo destrocen.\n\nZurd…",
+          "edit_history_tweet_ids": [
+            "1978608593415909567"
+          ]
+        }
+      },
+      {
+        "json": {
+          "id": "1978608584905597332",
+          "text": "え、ちょ、ナイキのエアマックス1、美品だって！軽くて履き心地良いって最高じゃん。27.5cmか…デカすぎ！誰か買って私にくれ！\n\n【美品】NIKE ナイキ AIR MAX 1 BREEZE 27.5cm\nhttps://t.co/nUesHMtUbc",
+          "edit_history_tweet_ids": [
+            "1978608584905597332"
+          ]
+        }
+      },
+      {
+        "json": {
+          "id": "1978608488596017287",
+          "text": "@VivaLaPetty @huudreign Who tf is we? Tech is Nike top product",
+          "edit_history_tweet_ids": [
+            "1978608488596017287"
+          ]
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Search Tweets": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [],
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Search Tweets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Search Tweets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Append row in sheet1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Append row in sheet2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append row in sheet1": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Africa/Lagos",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "309ee1bd-a116-46c2-a43e-38e9b3beb362",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "4fc582d90d92c50feddb8c114fb53d2aa450d810b1bc7a485479fb6beedb8be1"
+  },
+  "id": "MkdKypo4ZxGY6qoi",
+  "tags": []
+}
